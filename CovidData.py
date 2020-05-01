@@ -6,13 +6,11 @@ Created on Mon Apr 27 19:51:46 2020
 @author: matthew salerno
 """
 
+#TODO: Add docstrings
 
 import matplotlib.dates as dates
 import urllib.request
-
-#DEFINITIONS
-URL = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv'
-COLUMNS = {'DATES':0, 'COUNTY':1, 'STATE':2, 'FIPS':3, 'CASES':4, 'DEATHS':5}
+import constants
 
 #CLASSES
 class data:
@@ -48,27 +46,35 @@ class data:
             self._Dates.append(date)
             return
         index = round((len(self._Dates)-1)*position)
-        if date == self._Dates[index]: #if date entry exists
+        #if date entry exists
+        if date == self._Dates[index]: 
             self._TotalCases[index] += cases
             self._TotalDeaths[index] += deaths
-        elif date > self._Dates[index]: #if date is greater than position
-            if index >= len(self._Dates)-1: #if outside list, append to end
+        #if date is greater than position
+        elif date > self._Dates[index]: 
+            #if outside list, append to end
+            if index >= len(self._Dates)-1: 
                 self._TotalCases.append(cases)
                 self._TotalDeaths.append(deaths)
                 self._Dates.append(date)
-            elif date < self._Dates[index+1]: #if proper position is between current index and the next one
+            #if proper position is between current index and the next one
+            elif date < self._Dates[index+1]: 
                 self._TotalCases.insert(index+1,cases)
                 self._TotalDeaths.insert(index+1,deaths)
                 self._Dates.insert(index+1,date)
-            else: #if inside list,change position and recurse
+            #if inside list,change position and recurse
+            else: 
                 position = position+1/level
                 self.addEntry(cases,deaths,date,position, level*2)
-        elif date < self._Dates[index]: #if date is less than position
-            if index <= 0: #if outside list, insert at beginnning
+        #if date is less than position
+        elif date < self._Dates[index]: 
+            #if outside list, insert at beginnning
+            if index <= 0: 
                 self._TotalCases.insert(0,cases)
                 self._TotalDeaths.insert(0,deaths)
                 self._Dates.insert(0,date)
-            elif date > self._Dates[index-1]: #if proper position is between current index and the last one
+            #if proper position is between current index and the last one
+            elif date > self._Dates[index-1]: 
                 self._TotalCases.insert(index,cases)
                 self._TotalDeaths.insert(index,deaths)
                 self._Dates.insert(index,date)
@@ -77,9 +83,11 @@ class data:
                 self.addEntry(cases,deaths,date,position, level*2)
     
     def getAll(self, index = None):
-        return {'total cases':self.getTotalCases(index), 'new cases':self.getNewCases(index),
-                'total deaths':self.getTotalDeaths(index), 'new deaths':self.getNewDeaths(index),
-                'date':self.getDates(index)}
+        return {constants.TOTAL_CASES_KEY():self.getTotalCases(index),
+                constants.NEW_CASES_KEY():self.getNewCases(index),
+                constants.TOTAL_DEATHS_KEY():self.getTotalDeaths(index),
+                constants.NEW_DEATHS_KEY():self.getNewDeaths(index),
+                constants.DATE_KEY():self.getDates(index)}
                 
     def getTotalCases(self, index = None):
         if index is None:
@@ -111,20 +119,28 @@ class data:
             if index == 0: #if index is zero
                 return float(total[0])
             if total[dateRange[1]] is not None:
-                if total[dateRange[0]] is not None: #first and second dates have data
-                    delta = float((total[dateRange[0]]-total[dateRange[1]])/(self._Dates[dateRange[0]]-self._Dates[dateRange[1]]))
-                else: #first index date has data but second doesn't
-                    if dateRange[1]+1 > len(self._Dates) - 1: #if going outside of the range
+                #first and second dates have data
+                if total[dateRange[0]] is not None: 
+                    delta = float((total[dateRange[0]]-total[dateRange[1]])/
+                                  (self._Dates[dateRange[0]]-
+                                   self._Dates[dateRange[1]]))
+                #first index date has data but second doesn't
+                else:
+                    #if going outside of the range
+                    if dateRange[1]+1 > len(self._Dates) - 1: 
                         return #TODO: add error
                     else:
                         dateRange[1] += 1
-            else: #first has no data, second is unknown
-                if dateRange[0]-1 < 0: #if going outside of the range
+            #first has no data, second is unknown
+            else:
+                #if going outside of the range
+                if dateRange[0]-1 < 0: 
                     return #TODO: add error
                 else:
                     dateRange[0] -= 1
         
-        else: #if getting the whole list
+        #if getting the whole list
+        else: 
             delta = []
             for i in range(len(self._Dates)):
                 delta.append(float(self.getDelta(total,i)))
@@ -132,9 +148,13 @@ class data:
     
 class region:
     def __init__(self, name = None):
-        self._name = name #This is the name of the region, used for finding a path to a sub-region
-        self._data = data() #This is data that does not belong to a sub-region
-        self._subRegions = {} #This is a dictionary containing all the sub-regions
+        #This is the name of the region,
+        #used for finding the path to a sub-region
+        self._name = name 
+        #This is data that does not belong to a sub-region
+        self._data = data() 
+        #This is a dictionary containing all the sub-regions
+        self._subRegions = {} 
     
     def addEntry(self, cases, deaths, date, path = []):
         if path:
@@ -157,8 +177,10 @@ class region:
     def getData(self):
         subRegionData = data()
         for i in self._subRegions:
-            subRegionData += self._subRegions[i].getData() #add up all subregions
-        return subRegionData+self._data #return sum of subregions and self
+            #add up all subregions
+            subRegionData += self._subRegions[i].getData() 
+        #return sum of subregions and self
+        return subRegionData+self._data 
     
     def addSubRegion(self, name):
         if type(name) == str:
@@ -166,7 +188,7 @@ class region:
         elif type(name) == region:
             self._subRegions[name.getName()] = name 
         
-def USADataFromCSV(url = URL):
+def USADataFromCSV(url = constants.URL()):
     USA = region('USA')
     response = urllib.request.urlopen(url)
     line = response.readline()
@@ -185,7 +207,12 @@ def USADataFromCSV(url = URL):
             if len(line) != 6:
                 break
             try:
-                USA.addEntry(int(line[COLUMNS['CASES']]),int(line[COLUMNS['DEATHS']]),dates.datestr2num(line[COLUMNS['DATES']]),[line[COLUMNS['COUNTY']],line[COLUMNS['STATE']]])
+                USA.addEntry(int(line[constants.COLUMNS()['CASES']]),
+                             int(line[constants.COLUMNS()['DEATHS']]),
+                             dates.datestr2num\
+                                 (line[constants.COLUMNS()['DATES']]),
+                             [line[constants.COLUMNS()['COUNTY']],
+                                 line[constants.COLUMNS()['STATE']]])
             except:
                 pass
     return USA

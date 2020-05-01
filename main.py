@@ -6,6 +6,10 @@ Created on Mon Apr 27 19:53:27 2020
 @author: matt
 """
 
+#TODO: Fix Spacing is GUI
+#TODO: Move out of main.py
+#TODO: Add docstrings to function
+
 import sys
 import CovidData
 import plotter
