@@ -8,7 +8,7 @@ Created on Mon Apr 27 19:53:27 2020
 
 #TODO: Fix Spacing is GUI
 #TODO: Move out of main.py
-#TODO: Add docstrings to function
+#TODO: Add docstrings to functions
 
 import sys
 import CovidData
@@ -20,15 +20,7 @@ from PyQt5.QtCore import Qt, pyqtSlot, QDate
 from copy import deepcopy
 import matplotlib.dates as mdates
 import datetime
-
-
-def QDate2DateNum(date):
-    return mdates.datestr2num(date.toString('yyyy-MM-dd'))
-                              
-def DateNum2QDate(date):
-    date = mdates.num2date(date)
-    return QDate(date.year,date.month,date.day)
-    
+from converters import QDate2DateNum, DateNum2QDate, Path2Name
 
 class App(QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -59,7 +51,7 @@ class App(QMainWindow):
         COMBINE = 'add'
         XSCALE = 'linear'
         YSCALE = 'linear'
-        plotter.plot(self.regions.getRootRegion(),[self.regions.getPath()],
+        plotter.plot(self.regions.getRootRegion(),self.regions.getPathList(),
                      self.cal.getRange,self.cal.getEvents(),COMBINE,
                      [self.plotSettings.getYField()],self.plotSettings.getXField(),
                      XSCALE,YSCALE)
@@ -280,31 +272,48 @@ class regionSelectWidget(QWidget):
             region = kwargs['region']
         super(regionSelectWidget, self).__init__(*args, **kwargs)
         #self.setSelectionMode(QAbstractItemView.ExtendedSelection) #temporarily removed
-        self.regionList = QListWidget()
+        
         self._region = region
         self._path = []
+        self._paths = []
+        self.regionList = QListWidget()
+        self.pathList = QListWidget()
         self.addItemsFromRegion()
         self.initUI()
         
     def initUI(self):
+        
         self._grid = QGridLayout(self)
         self.setLayout(self._grid)
         
         #RegionList 
         self.regionList.setWindowTitle('Regions')
-        self.regionList.itemClicked.connect(self.Clicked)
-        self.regionList.itemDoubleClicked.connect(self.DoubleClicked)
-        self._grid.addWidget(self.regionList, 4,0,1,2)
+        self.regionList.itemDoubleClicked.connect(self.regionDoubleClicked)
+        self._grid.addWidget(self.regionList, 1,0,4,2)
+        
+        #pathlist
+        self.pathList.setWindowTitle('Paths')
+        self._grid.addWidget(self.pathList, 6,0,4,2)
+        
+        #add button
+        self.addButton = QPushButton('add')
+        self.addButton.clicked.connect(self.addSelectedToPath)
+        self._grid.addWidget(self.addButton, 5,1,1,1)
+        
+        #clear button
+        self.clearButton = QPushButton('clear')
+        self.clearButton.clicked.connect(self.clearPathItems)
+        self._grid.addWidget(self.clearButton, 10,0,1,2)
         
         #regionList title
         self.regionLabel =  QLabel('Region:')
         self.regionLabel.setAlignment(Qt.AlignCenter)
-        self._grid.addWidget(self.regionLabel, 2,0,1,2)
+        self._grid.addWidget(self.regionLabel, 0,0,1,2)
         
         #Back button
         self.backButton = QPushButton('back')
         self.backButton.clicked.connect(self.back)
-        self._grid.addWidget(self.backButton, 3,0,1,1)
+        self._grid.addWidget(self.backButton, 5,0,1,1)
         
     def getPath(self):
         return self._path
@@ -322,22 +331,30 @@ class regionSelectWidget(QWidget):
         return curObject            
     def getRootRegion(self):
         return self._region
-    
-    def Clicked(self,item):
-        pass
-    
-    def DoubleClicked(self,item):
+
+    def regionDoubleClicked(self,item):
         clickedObj = self.getCurrentObject().getSubRegion(item.text())
         if clickedObj.getSubRegions():
             self._path.append(item.text())
             self.addItemsFromRegion()
 
-        
     def back(self):
         if self._path:
             self._path.pop()
             self.addItemsFromRegion()
 
+    def addSelectedToPath(self):
+        self._paths.append(self._path + [self.regionList.currentItem().text()])
+        self.pathList.addItem(Path2Name(self._paths[-1]))
+        
+    def clearPathItems(self):
+        self._paths.clear()
+        self.pathList.clear()
+        
+    def getPathList(self):
+        return self._paths
+        
+    
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

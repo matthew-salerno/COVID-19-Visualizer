@@ -5,6 +5,8 @@ import matplotlib.dates as mdates
 import CovidData
 import constants
 import copy
+import numpy as np
+from converters import Path2Name
 
 def plot(rootRegion, paths, dateRange, events, combine,
           dependentVariables, independentVariable, xScale, yScale):
@@ -107,6 +109,7 @@ def plot(rootRegion, paths, dateRange, events, combine,
 
     #plot
     fig, ax = plt.subplots()
+
     for i in dependentData:
         plt.plot(independentData[i], dependentData[i], '-', label = i)
     ax.set(xlabel=xLabel, ylabel=yLabel, title=graphTitle)
@@ -116,10 +119,15 @@ def plot(rootRegion, paths, dateRange, events, combine,
             plt.gca().xaxis.set_major_locator(mdates.DayLocator())
             plt.gcf().autofmt_xdate()
         pass #TODO: add event markers here
+        
+    #set xticks
+    allDates = set()
+    for key in independentData:
+        allDates = allDates | set(independentData[key])
+    print(allDates)
+    print(max(allDates))
+    print(min(allDates))
+    plt.xticks(np.arange(min(allDates),max(allDates)+1,
+                         (max(allDates)-min(allDates))/constants.XTICKS()))
     plt.show()
 
-def Path2Name(path):
-    pathName = ''
-    for i in range(len(path)-1,-1,-1):
-            pathName += ', ' + path[i]
-    return pathName

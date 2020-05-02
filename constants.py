@@ -17,6 +17,9 @@ def COLUMNS(source = 'NYT-Counties'):
         return {'DATES':0, 'COUNTY':1, 'STATE':2,
                 'FIPS':3, 'CASES':4, 'DEATHS':5}
 
+def XTICKS():
+    return 10
+
 def KEY_TO_LABEL(key = None):
     """Returns a desired text label from a key"""
     KeyDict = {TOTAL_CASES_KEY():TOTAL_CASES_LABEL(),
