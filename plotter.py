@@ -4,24 +4,10 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import CovidData
 import constants
-
-#TODO: remove
-def plotOld(x,y,xType,yType, title):
-    fig, ax = plt.subplots()
-    if xType == 'date':
-        plt.plot_date(x,y, '-')
-        plt.gca().xaxis.set_major_locator(mdates.WeekdayLocator(mdates.SUNDAY))
-        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%d %b %Y"))
-        plt.gcf().autofmt_xdate()
-    else:
-        plt.plot(x,y, '-')
-    ax.set(xlabel=xType, ylabel=yType, title=title)
-    plt.show()
-
-#the sequel, to completely replace plot in the future    
+import copy
 
 def plot(rootRegion, paths, dateRange, events, combine,
-          dependentVariables, independentVariable):
+          dependentVariables, independentVariable, xScale, yScale):
     """Plots disease data
     arguments:
     rootRegion -- the region containing all the data, should be of type region
@@ -38,14 +24,14 @@ def plot(rootRegion, paths, dateRange, events, combine,
             line below it
     dependentVariables -- this is a list of keys found in rootRegion to be
         used as dependent variables these values will be displayed as seperate
-        lines, only works with multiple values when combine == 'add'
+        lines, does not work withcombine == 'stack'
+    xScale -- scale for x axis, can be 'linear' 'log' or 'semilog'
+    yScale -- scale for x axis, can be 'linear' 'log' or 'semilog'
     """
 
     #setup the name of the place being plotted
-    pathline = ''
     if len(paths) == 1:
-        for i in range(len(paths[0])-1,-1,-1):
-            pathline += ', ' + paths[0][i]
+        pathline = Path2Name(paths[0])
     else:
         pathline = 'multiple'
         
@@ -56,25 +42,84 @@ def plot(rootRegion, paths, dateRange, events, combine,
     else:
         yLabel = 'multiple'
     #setup the xLabel
-    xLabel = constants.KEY_TO_LABEL(independentVariable())
+    xLabel = constants.KEY_TO_LABEL(independentVariable)
     
     #setup the title    
-    graphTitle = ('COVID-19, ' + yLabel + ' over ' + xLabel + ' in ' + pathline)
+    print(yLabel)
+    print(xLabel)
+    graphTitle = 'COVID-19, ' + yLabel + ' over ' + xLabel + ' in ' + pathline
     
     #setup data
-    #TODO: get correct data
-    x = 0 #temp
-    y = 0 #temp
     
+    #This is the dict of regions contained in paths
+    regions = {}
+    
+    for path in paths:
+        curRegion = rootRegion
+        regionName = Path2Name(path)
+        #loop through all elements in path
+        for i in path:
+            curRegion = curRegion.getSubRegion(i)
+        #add the region to the regions dict
+        regions[regionName] = curRegion
+    
+    dependentData = {}
+    independentData = {}
+    if len(paths) > 1:
+        if combine == 'seperate':
+            for i in paths:
+                regionDataDict = regions[Path2Name(i)].getData().getAll()
+                if len(dependentVariables) > 1:
+                    for j in dependentVariables:
+                        dependentData[constants.KEY_TO_LABEL(j) +\
+                                      ' in ' + Path2Name(i)] = regionDataDict[j]
+                        independentData[constants.KEY_TO_LABEL(j) +\
+                                      ' in ' + Path2Name(i)] = regionDataDict[independentVariable]
+                else:
+                    dependentData[constants.KEY_TO_LABEL(Path2Name(i))]\
+                        = regionDataDict[dependentVariables[0]]
+                    independentData[constants.KEY_TO_LABEL(Path2Name(i))]\
+                        = regionDataDict[independentVariable]
+        elif combine == 'add':
+            totalData = CovidData.data()
+            for i in paths:
+                regionData = regions[Path2Name(i)].getData()
+                totalData += regionData
+            for i in dependentVariables:
+                dependentData[constants.KEY_TO_LABEL(i)] = totalData.getAll()[i]
+                independentData[constants.KEY_TO_LABEL(i)] = totalData.getAll()[independentVariable]
+        elif combine == 'stack':
+            if len(dependentVariables) > 1:
+                pass #TODO: Error
+            else:
+                totalData = CovidData.data()
+                for i in paths:
+                    regionData = regions[Path2Name(i)].getData()
+                    totalData += regionData
+                    dependentData[Path2Name(i)] = totalData.getAll()[dependentVariables[0]]
+                    independentData[Path2Name(i)] = totalData.getAll()[independentVariable]
+    #paths is length 1
+    else:
+        regionData = regions[Path2Name(paths[0])].getData().getAll()
+        for i in dependentVariables:
+            dependentData[constants.KEY_TO_LABEL(i)] = regionData[i]
+            independentData[constants.KEY_TO_LABEL(i)] = regionData[independentVariable]
+
     #plot
     fig, ax = plt.subplots()
-    if independentVariable == constants.DATE_KEY():
-        plt.plot_date(x,y, '-')
-        plt.gca().xaxis.set_major_locator(mdates.WeekdayLocator(mdates.SUNDAY))
-        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%d %b %Y"))
-        plt.gcf().autofmt_xdate()
-    else:
-        plt.plot(x,y, '-')
+    for i in dependentData:
+        plt.plot(independentData[i], dependentData[i], '-', label = i)
     ax.set(xlabel=xLabel, ylabel=yLabel, title=graphTitle)
+    if independentVariable in constants.TIME_TYPES():
+        if independentVariable == constants.DATE_KEY():
+            plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
+            plt.gca().xaxis.set_major_locator(mdates.DayLocator())
+            plt.gcf().autofmt_xdate()
+        pass #TODO: add event markers here
     plt.show()
-    
+
+def Path2Name(path):
+    pathName = ''
+    for i in range(len(path)-1,-1,-1):
+            pathName += ', ' + path[i]
+    return pathName

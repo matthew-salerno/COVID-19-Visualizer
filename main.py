@@ -44,7 +44,7 @@ class App(QMainWindow):
         self.regions = regionSelectWidget()
         self.plotSettings = plotSettings()
         self.cal = calendar()
-        self.plot = plotButton(dataWidget = self.plotSettings,regionWidget = self.regions)
+        self.plot = plotButton()
         
         self.mainGrid.addWidget(self.regions, 1,0,1,1)
         self.mainGrid.addWidget(self.plotSettings, 0,0,1,1)
@@ -52,9 +52,17 @@ class App(QMainWindow):
         self.mainGrid.addWidget(self.plot, 2,0,1,2)
 
         #finalize
-        
+        self.plot.button.clicked.connect(self.plotData)
         self.show()
         
+    def plotData(self):
+        COMBINE = 'add'
+        XSCALE = 'linear'
+        YSCALE = 'linear'
+        plotter.plot(self.regions.getRootRegion(),[self.regions.getPath()],
+                     self.cal.getRange,self.cal.getEvents(),COMBINE,
+                     [self.plotSettings.getYField()],self.plotSettings.getXField(),
+                     XSCALE,YSCALE)
 
 
 class plotSettings(QWidget):
@@ -69,25 +77,25 @@ class plotSettings(QWidget):
         #dependent field
         self.depMenu = QComboBox()
         self.depMenu.addItems(['None'] + list(set(CovidData.region().getData().getAll())-set(['date'])))
-        self._grid.addWidget(self.depMenu, 1,1,1,1)
+        self._grid.addWidget(self.depMenu, 1,0,1,1)
         self.depMenu.currentIndexChanged.connect(self.setYField)
         
         #independent field
         self.indepMenu = QComboBox()
         self.indepMenu.addItems(['None'] + list(set(CovidData.region().getData().getAll())))
-        self._grid.addWidget(self.indepMenu, 1,0,1,1)
+        self._grid.addWidget(self.indepMenu, 1,1,1,1)
         self.indepMenu.currentIndexChanged.connect(self.setXField)
         
         #independent label
         self.xLabel =  QLabel('X')
         self.xLabel.setAlignment(Qt.AlignCenter)
-        self._grid.addWidget(self.xLabel, 0,0,1,1)
+        self._grid.addWidget(self.xLabel, 0,1,1,1)
         
         
         #Dependent Label
         self.yLabel =  QLabel('Y')
         self.yLabel.setAlignment(Qt.AlignCenter)
-        self._grid.addWidget(self.yLabel, 0,1,1,1)
+        self._grid.addWidget(self.yLabel, 0,0,1,1)
     
     def setXField(self, index):
         self.xField = self.indepMenu.itemText(index)
@@ -100,26 +108,12 @@ class plotSettings(QWidget):
     
 class plotButton(QWidget):
         def __init__(self, *args, **kwargs):
-            self.regionWidget = kwargs.pop('regionWidget')
-            self.dataWidget = kwargs.pop('dataWidget')
             super(plotButton, self).__init__(*args, **kwargs)
             self.initUI()
         def initUI(self):
             self._grid = QGridLayout(self)
-            self.plotButton = QPushButton('Plot')
-            self.plotButton.clicked.connect(self.plot)
-            self._grid.addWidget(self.plotButton, 0,0,1,1)
-        
-        def listRef(self, ref):
-            self.regionList = ref
-        
-        def plot(self):
-            selObj = self.regionWidget.getCurrentObject().getSubRegion(self.regionWidget.regionList.currentItem().text())
-            pathline = selObj.getName()
-            for i in range(len(self.regionWidget._path)-1,-1,-1):
-                pathline += ', ' + self.regionWidget._path[i]
-            plotter.plot(selObj.getData().getAll()[self.dataWidget.xField],selObj.getData().getAll()[self.dataWidget.yField],self.dataWidget.xField, self.dataWidget.yField,'COVID-19, ' + self.dataWidget.yField + ' over ' + self.dataWidget.xField + ' in ' + pathline)
-
+            self.button = QPushButton('Plot')
+            self._grid.addWidget(self.button, 0,0,1,1)
 
 
 class calendar(QWidget):
@@ -326,6 +320,8 @@ class regionSelectWidget(QWidget):
         for i in self._path:
             curObject = curObject.getSubRegion(i)
         return curObject            
+    def getRootRegion(self):
+        return self._region
     
     def Clicked(self,item):
         pass

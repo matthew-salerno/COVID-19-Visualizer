@@ -17,13 +17,17 @@ def COLUMNS(source = 'NYT-Counties'):
         return {'DATES':0, 'COUNTY':1, 'STATE':2,
                 'FIPS':3, 'CASES':4, 'DEATHS':5}
 
-def KEY_TO_LABEL():
+def KEY_TO_LABEL(key = None):
     """Returns a desired text label from a key"""
-    return {TOTAL_CASES_KEY():TOTAL_CASES_LABEL(),
-            DATE_KEY():DATE_LABEL,
+    KeyDict = {TOTAL_CASES_KEY():TOTAL_CASES_LABEL(),
+            DATE_KEY():DATE_LABEL(),
             TOTAL_DEATHS_KEY():TOTAL_DEATHS_LABEL(),
             NEW_CASES_KEY():NEW_CASES_LABEL(),
-            NEW_DEATHS_KEY():NEW_DEATHS_LABEL}
+            NEW_DEATHS_KEY():NEW_DEATHS_LABEL()}
+    if key is None:
+        return KeyDict
+    else:
+        return KeyDict[key]
 
 #Keys used for addressing data
 
@@ -59,4 +63,4 @@ def NEW_DEATHS_LABEL():
 
 def TIME_TYPES():
     """set of data types which are related to time"""
-    return frozenset(DATE_KEY(),NEW_DEATHS_KEY(),NEW_CASES_KEY())
+    return frozenset((DATE_KEY(),NEW_DEATHS_KEY(),NEW_CASES_KEY()))
