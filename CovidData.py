@@ -34,61 +34,94 @@ class data:
     def __add__(self, other):
         returnData = data()
         for i in self:
-            returnData.addEntry(i['total cases'], i['total deaths'], i['date'])
+            returnData.addEntry(i[constants.TOTAL_CASES_KEY()],
+                                i[constants.TOTAL_DEATHS_KEY()],
+                                i[constants.DATE_KEY()])
         for i in other:
-            returnData.addEntry(i['total cases'], i['total deaths'], i['date'])
+            returnData.addEntry(i[constants.TOTAL_CASES_KEY()],
+                                i[constants.TOTAL_DEATHS_KEY()],
+                                i[constants.DATE_KEY()])
         return returnData
     
-    def addEntry(self, cases,deaths,date, position = 0.5, level = 4.0):
+    def addEntry(self, cases,deaths,date):
+        index, exists = self.findEntry(date)
+        if exists:
+            if self._TotalCases[index] is None:
+                self._TotalCases = cases
+            elif cases is not None:
+                self._TotalCases[index] += cases
+                
+            if self._TotalDeaths[index] is None:
+                self._TotalDeaths = deaths
+            elif deaths is not None:
+                self._TotalDeaths[index] += deaths
+        else:
+            self._TotalCases.insert(index,cases)
+            self._TotalDeaths.insert(index,deaths)
+            self._Dates.insert(index,date)
+       
+    def findEntry(self, date, position = 0.5, level = 4.0):
+        """Returns a tuple where the first element is the index of the
+        object, or where the object would be inserted, and the second element
+        is a boolean which represents if the object already exists or not"""
         if len(self._Dates) == 0:
-            self._TotalCases.append(cases)
-            self._TotalDeaths.append(deaths)
-            self._Dates.append(date)
-            return
+            return (0, False)
         index = round((len(self._Dates)-1)*position)
         #if date entry exists
-        if date == self._Dates[index]: 
-            self._TotalCases[index] += cases
-            self._TotalDeaths[index] += deaths
+        if date == self._Dates[index]:
+            return (index, True)
         #if date is greater than position
         elif date > self._Dates[index]: 
-            #if outside list, append to end
+            #if outside list, return end
             if index >= len(self._Dates)-1: 
-                self._TotalCases.append(cases)
-                self._TotalDeaths.append(deaths)
-                self._Dates.append(date)
+                return (len(self._Dates), False)
             #if proper position is between current index and the next one
             elif date < self._Dates[index+1]: 
-                self._TotalCases.insert(index+1,cases)
-                self._TotalDeaths.insert(index+1,deaths)
-                self._Dates.insert(index+1,date)
+                return (index+1, False)
             #if inside list,change position and recurse
             else: 
                 position = position+1/level
-                self.addEntry(cases,deaths,date,position, level*2)
+                return self.findEntry(date,position, level*2)
         #if date is less than position
         elif date < self._Dates[index]: 
             #if outside list, insert at beginnning
             if index <= 0: 
-                self._TotalCases.insert(0,cases)
-                self._TotalDeaths.insert(0,deaths)
-                self._Dates.insert(0,date)
+                return (0,False)
             #if proper position is between current index and the last one
             elif date > self._Dates[index-1]: 
-                self._TotalCases.insert(index,cases)
-                self._TotalDeaths.insert(index,deaths)
-                self._Dates.insert(index,date)
+                return (index, False)
             else: #if inside list,change position and recurse
                 position = position-1/level
-                self.addEntry(cases,deaths,date,position, level*2)
+                return self.findEntry(date,position, level*2)
+    
     
     def getAll(self, index = None):
-        return {constants.TOTAL_CASES_KEY():self.getTotalCases(index),
-                constants.NEW_CASES_KEY():self.getNewCases(index),
-                constants.TOTAL_DEATHS_KEY():self.getTotalDeaths(index),
-                constants.NEW_DEATHS_KEY():self.getNewDeaths(index),
-                constants.DATE_KEY():self.getDates(index)}
-                
+        values = {}
+        funcs = self._getFuncs()
+        for i in funcs:
+            values[i] = funcs[i](index)
+        return values
+    
+    def _getFuncs(self):
+        return {constants.TOTAL_CASES_KEY():self.getTotalCases,
+                constants.NEW_CASES_KEY():self.getNewCases,
+                constants.TOTAL_DEATHS_KEY():self.getTotalDeaths,
+                constants.NEW_DEATHS_KEY():self.getNewDeaths,
+                constants.DATE_KEY():self.getDates}
+    
+    def __getitem__(self, key):
+        if type(key) is tuple:
+            index = key[1]
+            key = key[0]
+        elif type(key) is str:
+            index = None
+        else:
+            raise TypeError("key must be str or tuple, got" + str(type(key)))
+        if key in self._getFuncs():
+            return self._getFuncs()[key](index)
+        else:
+            raise IndexError
+    
     def getTotalCases(self, index = None):
         if index is None:
             return self._TotalCases
@@ -113,36 +146,44 @@ class data:
     def getNewDeaths(self, index = None):
         return self.getDelta(self._TotalDeaths, index)
     
-    def getDelta(self, total, index = None):
+    def getDelta(self, total, index = None, dateRange = None):
         if index is not None:
-            dateRange = [index-1,index]
+            if dateRange is None:
+                dateRange = [index-1,index]
             if index == 0: #if index is zero
-                return float(total[0])
+                if total[0] is None:
+                    return None
+                else:
+                    return float(total[0])
+            #first date has data
             if total[dateRange[1]] is not None:
                 #first and second dates have data
                 if total[dateRange[0]] is not None: 
-                    delta = float((total[dateRange[0]]-total[dateRange[1]])/
+                    return float((total[dateRange[0]]-total[dateRange[1]])/
                                   (self._Dates[dateRange[0]]-
                                    self._Dates[dateRange[1]]))
                 #first index date has data but second doesn't
                 else:
                     #if going outside of the range
                     if dateRange[1]+1 > len(self._Dates) - 1: 
-                        return #TODO: add error
+                        return None
                     else:
                         dateRange[1] += 1
             #first has no data, second is unknown
             else:
                 #if going outside of the range
                 if dateRange[0]-1 < 0: 
-                    return #TODO: add error
+                    return None
                 else:
                     dateRange[0] -= 1
-        
+            #recurse
+            return self.getDelta(total,index,dateRange)
         #if getting the whole list
         else: 
+            if dateRange is None:
+                dateRange = [0,len(self._Dates)]
             delta = []
-            for i in range(len(self._Dates)):
+            for i in range(dateRange[0], dateRange[1]):
                 delta.append(float(self.getDelta(total,i)))
         return delta
     

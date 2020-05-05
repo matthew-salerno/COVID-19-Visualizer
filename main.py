@@ -6,7 +6,6 @@ Created on Mon Apr 27 19:53:27 2020
 @author: matt
 """
 
-#TODO: Fix Spacing is GUI
 #TODO: Move out of main.py
 #TODO: Add docstrings to functions
 
@@ -38,21 +37,21 @@ class App(QMainWindow):
         self.cal = calendar()
         self.plot = plotButton()
         
-        self.mainGrid.addWidget(self.regions, 1,0,1,1)
+        self.mainGrid.addWidget(self.regions, 1,0,5,1)
         self.mainGrid.addWidget(self.plotSettings, 0,0,1,1)
-        self.mainGrid.addWidget(self.cal, 0,1,1,1)
-        self.mainGrid.addWidget(self.plot, 2,0,1,2)
+        self.mainGrid.addWidget(self.cal, 0,1,3,1)
+        self.mainGrid.addWidget(self.plot, 7,0,1,2)
 
         #finalize
         self.plot.button.clicked.connect(self.plotData)
         self.show()
         
     def plotData(self):
-        COMBINE = 'add'
+        COMBINE = 'seperate'
         XSCALE = 'linear'
         YSCALE = 'linear'
         plotter.plot(self.regions.getRootRegion(),self.regions.getPathList(),
-                     self.cal.getRange,self.cal.getEvents(),COMBINE,
+                     self.cal.getRange(),self.cal.getEvents(),COMBINE,
                      [self.plotSettings.getYField()],self.plotSettings.getXField(),
                      XSCALE,YSCALE)
 
@@ -68,7 +67,7 @@ class plotSettings(QWidget):
         
         #dependent field
         self.depMenu = QComboBox()
-        self.depMenu.addItems(['None'] + list(set(CovidData.region().getData().getAll())-set(['date'])))
+        self.depMenu.addItems(['None'] + list(set(CovidData.region().getData().getAll())))
         self._grid.addWidget(self.depMenu, 1,0,1,1)
         self.depMenu.currentIndexChanged.connect(self.setYField)
         

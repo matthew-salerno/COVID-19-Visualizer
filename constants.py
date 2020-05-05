@@ -19,6 +19,8 @@ def COLUMNS(source = 'NYT-Counties'):
 
 def XTICKS():
     return 10
+def XTICK_ROTATION():
+    return 60
 
 def KEY_TO_LABEL(key = None):
     """Returns a desired text label from a key"""
@@ -49,9 +51,19 @@ def NEW_CASES_KEY():
 def NEW_DEATHS_KEY():
     """Returns the key for new deaths"""
     return 'new deaths'
-
+def LABEL_KEY():
+    return 'label'
+def DEPENDENT_KEY():
+    return 'dependent data'
+def INDEPENDENT_KEY():
+    return 'independent data'
+def PATH_KEY():
+    return 'path'
+def EVENT_KEY():
+    return 'event'
+def EVENTS_KEY():
+    return 'events'
 #labels used displaying data
-
 def TOTAL_CASES_LABEL():
     return 'Total Cases'
 def DATE_LABEL():
